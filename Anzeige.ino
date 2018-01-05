@@ -1,7 +1,4 @@
 void anzeige() {
-
-
-
   if (analogRead(photo) > storage.hell) {
     display.setBrightness(0x00);//helligkeit auf maximum
     digitalWrite(lcdStrom, HIGH);
@@ -9,11 +6,7 @@ void anzeige() {
     display.setBrightness(0x0f);//helligkeit auf maximum
     digitalWrite(lcdStrom, LOW);
   }
-
-
-
-
-  display.showNumberDec(hour() * 100 + minute(), true);
+  
   lcd.setCursor(0, 0);
   sprintf(lcdChar, "%2s;%2s;%2s;%2s;%2s;%2s;%2s", weckzeiten[0].getString(), weckzeiten[1].getString(), weckzeiten[2].getString(), weckzeiten[3].getString(), weckzeiten[4].getString(), weckzeiten[5].getString(), weckzeiten[6].getString());
   lcd.print(lcdChar);/**/
@@ -49,11 +42,7 @@ void anzeige() {
           if (okay.checkPressed()) {
             menuID = 1;
             subMenuID = 0;
-            tm.Hour = hour();
-            tm.Minute = minute();
-            tm.Day = day();
-            tm.Month = month();
-            tm.Year = CalendarYrToTm(year());
+            tm=getLocalTime();
             lastPot = analogRead(poti);
             lcd.clear();
           }

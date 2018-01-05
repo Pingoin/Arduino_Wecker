@@ -9,9 +9,9 @@ void printTimeSet(char const aktiv[3]) {
 void setNewTime() {
   if (okay.checkPressed()) {
     tm.Second = (second() + 60 - secondOffset) % 60;
-    t = makeTime(tm);
-    RTC.set(t);
-    setTime(t);
+    local = makeTime(tm);
+    RTC.set(Zeitzone.toUTC(local));
+    setTime(Zeitzone.toUTC(local));
     lcd.clear();
     menuID = 0;
     secondOffset = 0;
@@ -19,55 +19,20 @@ void setNewTime() {
 }
 
 void printTime() {
-  sprintf(lcdChar, " %02d:%02d:%02d %03s %02d.%02d.   ", hour(), minute(), second(), weckzeiten[0].createStr(weekday()), day(), month());
+  local=Zeitzone.toLocal(now());
+  display.showNumberDec(hour(local) * 100 + minute(local), true);
+  sprintf(lcdChar, " %02d:%02d:%02d %03s %02d.%02d.   ", hour(local), minute(local), second(local), weckzeiten[0].createStr(weekday(local)), day(local), month(local));
   lcd.print(lcdChar);
 }
 
-void sommerZeit() {
-  bool DST = false;
-  if (month() <= 2 || month() >= 11)
-    DST = false;                                   // Winter months
-  if (month() >= 4 && month() <= 9)
-    DST = true;                                    // Summer months
-  if (month() == 3 && (day() - (weekday() - 1)) >= 25) { // Begin of summer time
-    if (hour() >= 2 || weekday() != 1)
-      DST = true;
-  }
-  if (month() == 10 && day() - (weekday() - 1) < 25)
-    DST = true;
-  if (month() == 10 && day() - (weekday() - 1) >= 25) {
-    if ((hour() >= 3) || weekday() != 1 || (hour() == 2 && !storage.sommer)) {
-      DST = false;
-    }
-    else {
-      DST = true;
-    }
-  }
-  if (DST && !storage.sommer) {
-    tm.Hour = hour() + 1;
-    tm.Minute = minute();
-    tm.Second = second();
-    tm.Day = day();
-    tm.Month = month();
-    tm.Year = CalendarYrToTm(year());
-    t = makeTime(tm);
-    RTC.set(t);
-    setTime(t);
-    storage.sommer = true;
-    saveConfig();
-  } else if (!DST && storage.sommer) {
-    tm.Hour = hour() - 1;
-    tm.Minute = minute();
-    tm.Second = second();
-    tm.Day = day();
-    tm.Month = month();
-    tm.Year = CalendarYrToTm(year());
-    t = makeTime(tm);
-    RTC.set(t);
-    setTime(t);
-    storage.sommer = false;
-    saveConfig();
-  }
-
+tmElements_t getLocalTime() {
+  tmElements_t temp;
+  local=Zeitzone.toLocal(now());
+  temp.Hour = hour(local);
+  temp.Minute = minute(local);
+  temp.Day = day(local);
+  temp.Month = month(local);
+  temp.Year = CalendarYrToTm(year(local));
+  return temp;
 }
 

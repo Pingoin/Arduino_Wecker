@@ -9,8 +9,9 @@ void subMenuMax(byte subMenuMax) {
 
 void weckentest() {
   if (second() <= 2) {
+    local=Zeitzone.toLocal(now());
     for (int i = 0; i < anzWeck; i++) {
-      if (weckzeiten[i].getAlarm(hour(), minute(), weekday())) {
+      if (weckzeiten[i].getAlarm(hour(local), minute(local), weekday(local))) {
         wecken = 1;
       }
     }

@@ -1,9 +1,10 @@
-l//Bibliotheken:
-#include <Wire.h> //Für viele I2C: LCD;RTC;
-#include <LiquidCrystal_I2C.h> //Fürs LCD
+//Bibliotheken:
+#include <Wire.h> //Fï¿½r viele I2C: LCD;RTC;
+#include <LiquidCrystal_I2C.h> //FÃ¼rs LCD
 #include <Time.h> //Zeitverwaltung
+#include <Timezone.h> //zeitzone und sommerzeit
 #include <DS3232RTC.h> //RTC
-#include <stdio.h> //für formatierte charArrays
+#include <stdio.h> //fÃ¼r formatierte charArrays
 #include <DHT.h> //Feuchte und temperatursensor
 #include <Pingoin.h> //Eigene Objektsammlung
 #include <EEPROM.h> //speichern im konsistenten speicher
@@ -11,23 +12,23 @@ l//Bibliotheken:
 
 
 //Pinnbelegung:
-#define poti A2
+#define poti A7
 #define tSensor A0
-#define photo A1
+#define photo A6
 #define lcdSpalten 20
 #define lcdZeilen 4
-#define DHTPIN 7
+#define DHTPIN 8
 #define DHTTYPE DHT22
-#define klingel 6
+#define klingel 2
 #define anzWeck 7
-#define lcdStrom 8
-#define CLK 9
-#define DIO 10
-#define CONFIG_VERSION "001"
+#define lcdStrom 7
+#define CLK 10
+#define DIO 9
+#define CONFIG_VERSION "003"
 #define CONFIG_START 64
 
 struct StoreStruct {
-  // This is for mere detection if they are your settings
+  // This is for mere detection if they aÃ¶ re your settings
   char version[4];
   int weckZ[7];
   int hell;
@@ -41,10 +42,10 @@ struct StoreStruct {
 
 
 //Buttons:
-PingoButton links(2);
-PingoButton rechts(3);
-PingoButton menu(4);
-PingoButton okay(5);
+PingoButton links(3);
+PingoButton rechts(6);
+PingoButton menu(5);
+PingoButton okay(4);
 
 //laufzeitvariablen:
 byte menuID = 0; //Position im Menu 0:=Anzeige
@@ -52,8 +53,8 @@ byte subMenuID = 0;
 byte secondOffset = 0;
 byte secondNew = 0;
 tmElements_t tm;
-time_t t;
-char lcdChar [lcdSpalten]; //String zum Anzeigen, wird für formatierte Ausgaben benötigt
+time_t local, utc;
+char lcdChar [lcdSpalten]; //String zum Anzeigen, wird fÃ¼r formatierte Ausgaben benÃ¶tigt
 bool wecken = 0;
 bool blinken = 0;
 AlarmTime weckzeiten[anzWeck];
@@ -63,26 +64,31 @@ byte weckMinute = 0;
 byte weckTag = 0;
 byte weckID = 0;
 char weckMen[3] = "hh";
-unsigned long lastMillis[] = {0}; //Laufzeiten für soft delay
+TimeChangeRule myDST = {"MESZ", Last, Sun, Mar, 2, 120};    //Regel fÃ¼r Sommerzeit begin UTC +2
+TimeChangeRule mySTD = {"MEZ", Last, Sun, Oct, 3, 60};     //Regel fÃ¼r Standardzeit begin UTC +1
+Timezone Zeitzone(myDST, mySTD);//Zeitzone aus Regeln susammenbauen
+
+
+unsigned long lastMillis[] = {0}; //Laufzeiten fÃ¼r soft delay
 //Blinken,
 
 
-//Geräte:
+//GerÃ¤te:
 LiquidCrystal_I2C lcd(0x27, lcdSpalten, lcdZeilen);//Definition des LCD displays
 DHT dht(DHTPIN, DHTTYPE); //Feuchte und Temperatur
 TM1637Display display(CLK, DIO);
 
 void setup() {
-  //geräte:
+  //gerÃ¤te:
   Serial.begin(9600); //Serieller Monitor
   lcd.begin(); //Initialisierung des LCDs
   lcd.clear(); //auf jeden fall mit leerer LCD starten
-  setSyncProvider(RTC.get);//Zeit wird regelmäßig mit RTC synchronisiert
+  setSyncProvider(RTC.get);//Zeit wird regelmÃ¤ÃŸig mit RTC synchronisiert
 
   //Pins:
   pinMode(lcdStrom, OUTPUT);
   digitalWrite(13, LOW);
-  //Überprüfungen:
+  //ÃœberprÃ¼fungen:
   if (timeStatus() != timeSet)
     Serial.println("Konnte nicht mit der RTC verbinden");
   else
@@ -93,12 +99,12 @@ void setup() {
   for (int i = 0; i < 7; i++) {
     weckzeiten[i].setInt(storage.weckZ[i]);
   }
+  display.setColon(true);// Doppelpunkt vom siebensegmenter
 }
 
 void loop() {
-  sommerZeit();
   weckentest();
-  anzeige();  //Menus anzeigen und Funktionen ausführen
+  anzeige();  //Menus anzeigen und Funktionen ausfÃ¼hren
   klingeln(); //Klingelhandler
 }
 
