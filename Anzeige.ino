@@ -7,13 +7,13 @@ void anzeige() {
   }
   if (analogRead(photo) > storage.hell && !sSegTest) {
     display.setBrightness(0x00);//helligkeit auf maximum
-    digitalWrite(lcdStrom, HIGH);
+    lcd.backlight();
   } else if (!sSegTest) {
     display.setBrightness(storage.sSegH);//helligkeit auf maximum
-    digitalWrite(lcdStrom, LOW);
+    lcd.backlight();
   } else {
     display.setBrightness(storage.sSegH);//helligkeit auf maximum
-    digitalWrite(lcdStrom, HIGH);
+    lcd.noBacklight();
   }
 
   lcd.setCursor(0, 0);

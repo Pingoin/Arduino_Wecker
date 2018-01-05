@@ -2,6 +2,7 @@
 #include <Wire.h> //F�r viele I2C: LCD;RTC;
 #include <LiquidCrystal_I2C.h> //Fürs LCD
 #include <Time.h> //Zeitverwaltung
+#include <TimeLib.h>
 #include <Timezone.h> //zeitzone und sommerzeit
 #include <DS3232RTC.h> //RTC
 #include <stdio.h> //für formatierte charArrays
@@ -10,24 +11,22 @@
 #include <EEPROM.h> //speichern im konsistenten speicher
 #include <TM1637Display.h> //7Segment display
 #include <Adafruit_BMP085.h>  // Bibliothek für Drucksensoren von Adafruit laden für unseren BMP 180
+#include <Encoder.h> //Drehimpulsgeber
 
 
-//Pinnbelegung:
-#define poti A7
-#define tSensor A0
-#define photo A6
+//Pinnbelegung/Konstanten:
+#define photo A3
 #define lcdSpalten 20
 #define lcdZeilen 4
-#define DHTPIN 8
+#define DHTPIN 11
 #define DHTTYPE DHT22
-#define klingel 2
-#define anzWeck 7
-#define lcdStrom 7
+#define klingel 12
 #define CLK 10
 #define DIO 9
 #define CONFIG_VERSION "005"
 #define CONFIG_START 64
-
+Encoder myEnc(2, 3);
+#define anzWeck 7
 struct StoreStruct {
   // This is for mere detection if they aö re your settings
   char version[4];
@@ -44,14 +43,13 @@ struct StoreStruct {
 
 
 //Buttons:
-PingoButton links(3);
-PingoButton rechts(6);
-PingoButton menu(5);
-PingoButton okay(4);
+PingoButton links(5,true);
+PingoButton rechts(6,true);
+PingoButton menu(7,true);
+PingoButton okay(8,true);
 
 //laufzeitvariablen:
 byte menuID = 0; //Position im Menu 0:=Anzeige
-byte subMenuID = 0;
 byte secondOffset = 0;
 byte secondNew = 0;
 tmElements_t tm;
@@ -67,17 +65,17 @@ byte weckStunde = 0;
 byte weckMinute = 0;
 byte weckTag = 0;
 byte weckID = 0;
-byte feuchte=0;
-byte tempA=0;
-int druck=0;
-byte tempI=0;
+byte feuchte = 0;
+byte tempA = 0;
+int druck = 0;
+byte tempI = 0;
 char weckMen[3] = "hh";
 TimeChangeRule myDST = {"MESZ", Last, Sun, Mar, 2, 120};    //Regel für Sommerzeit begin UTC +2
 TimeChangeRule mySTD = {"MEZ", Last, Sun, Oct, 3, 60};     //Regel für Standardzeit begin UTC +1
 Timezone Zeitzone(myDST, mySTD);//Zeitzone aus Regeln susammenbauen
 
 
-unsigned long lastMillis[] = {0,0}; //Laufzeiten für soft delay
+unsigned long lastMillis[] = {0, 0}; //Laufzeiten für soft delay
 //Blinken,Sensoren
 
 
@@ -91,12 +89,12 @@ void setup() {
   //geräte:
   Serial.begin(9600); //Serieller Monitor
   druckSensor.begin();   //zuvor defenierten Sensor "druckSensor" starten
-  lcd.begin(); //Initialisierung des LCDs
+  lcd.init(); //Initialisierung des LCDs
+  lcd.backlight();//Hintergrundbeleuchtung an
   lcd.clear(); //auf jeden fall mit leerer LCD starten
   setSyncProvider(RTC.get);//Zeit wird regelmäßig mit RTC synchronisiert
 
   //Pins:
-  pinMode(lcdStrom, OUTPUT);
   digitalWrite(13, LOW);
   //Überprüfungen:
   if (timeStatus() != timeSet)
@@ -115,7 +113,7 @@ void setup() {
 void loop() {
   weckentest();
   sensoren();
-  anzeige();  //Menus anzeigen und Funktionen ausführen
+  menu();  //Menus anzeigen und Funktionen ausführen
   klingeln(); //Klingelhandler
 }
 
@@ -130,16 +128,16 @@ void klingeln() {
   }
 }
 
-void sensoren(){
-  if(millis()>=lastMillis[1]+1000){
-feuchte=int(dht.readHumidity());
-tempA=int(dht.readTemperature());
-druck=int(druckSensor.readPressure()/100);
-/*tempI;/**/
-Serial.println(feuchte);
-Serial.println(tempA);
-Serial.println(druck);
-lastMillis[1]=millis();
+void sensoren() {
+  if (millis() >= lastMillis[1] + 1000) {
+    feuchte = int(dht.readHumidity());
+    tempA = int(dht.readTemperature());
+    druck = int(druckSensor.readPressure() / 100);
+    /*tempI;/**/
+    Serial.println(feuchte);
+    Serial.println(tempA);
+    Serial.println(druck);
+    lastMillis[1] = millis();
   }
 }
 
