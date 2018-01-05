@@ -1,105 +1,112 @@
-#include <AlarmTime.h>
-#include <DS3232RTC.h>
-#include <Time.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+//Bibliotheken:
+#include <Wire.h> //Für viele I2C: LCD;RTC;
+#include <LiquidCrystal_I2C.h> //Fürs LCD
+#include <Time.h> //Zeitverwaltung
+#include <DS3232RTC.h> //RTC
 #include <stdio.h> //für formatierte charArrays
-#include <I2Cdev.h>
-#include <TM1637Display.h>
-#include <DHT.h>
+#include <DHT.h> //Feuchte und temperatursensor
+#include <Pingoin.h> //Eigene Objektsammlung
+#include <EEPROM.h> //speichern im konsistenten speicher
 
-//Pinbelegungen
-#define klingel 3
-#define aus 2
-#define kick 4
-#define CLK 6
-#define DIO 5
-#define DHTPIN 2 
+
+//Pinnbelegung:
+#define poti A0
+#define lcdSpalten 20
+#define lcdZeilen 4
+#define DHTPIN 7
 #define DHTTYPE DHT22
+#define klingel 6
+#define anzWeck 7
+#define CONFIG_VERSION "aaa"
+#define CONFIG_START 32
 
-//Laufzeitvariablen
+struct StoreStruct {
+    // This is for mere detection if they are your settings
+  char version[4];
+  int weckZ[7];
+  int hell;
+}storage = {
+  CONFIG_VERSION,
+  {0,0,0,0,0,0,0},
+  0
+};
+
+//Buttons:
+PingoButton links(2);
+PingoButton rechts(3);
+PingoButton menu(4);
+PingoButton okay(5);
+
+//laufzeitvariablen:
+byte menuID = 0; //Position im Menu 0:=Anzeige
+byte subMenuID = 0;
+byte secondOffset = 0;
+byte secondNew = 0;
+tmElements_t tm;
+time_t t;
+char lcdChar [lcdSpalten]; //String zum Anzeigen, wird für formatierte Ausgaben benötigt
 bool wecken = 0;
 bool blinken = 0;
-const int anzWeck = 5;
 AlarmTime weckzeiten[anzWeck];
-char uhrzeit [16];
-char wetter [16];
+short int lastPot = 0;
+byte weckStunde=0;
+byte weckMinute=0;
+byte weckTag=0;
+byte weckID=0;
+char weckMen[3]="hh";
+unsigned long lastMillis[] = {0}; //Laufzeiten für soft delay
+//Blinken,
 
 
-
-//Geräte
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-TM1637Display display(CLK, DIO);
-DHT dht(DHTPIN, DHTTYPE);
-
+//Geräte:
+LiquidCrystal_I2C lcd(0x27, lcdSpalten, lcdZeilen);//Definition des LCD displays
+DHT dht(DHTPIN, DHTTYPE); //Feuchte und Temperatur
 
 void setup() {
-  //Geräte
-  Serial.begin(9600);
-  Wire.begin();
-  lcd.begin();
-  setSyncProvider(RTC.get);
-  dht.begin();
+  //geräte:
+  Serial.begin(9600); //Serieller Monitor
+  lcd.begin(); //Initialisierung des LCDs
+  lcd.clear(); //auf jeden fall mit leerer LCD starten
+  setSyncProvider(RTC.get);//Zeit wird regelmäßig mit RTC synchronisiert
 
-  //Pins    
-  pinMode(klingel, OUTPUT);
-  pinMode(aus, INPUT);
-  pinMode(kick, INPUT);
+  //Pins:
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
 
 
-  //Überprüfung
-  Serial.println("IC2 Geräte prüfen");
+
+  //Überprüfungen:
   if (timeStatus() != timeSet)
-    Serial.println("Keine Zeitsyncro mit RTC");
+    Serial.println("Konnte nicht mit der RTC verbinden");
   else
-    Serial.println("Zeit erfolgreich mit RTC syncronisiert");
+    Serial.println("Zeit wurde mit RTC synchronisiert");
 
-  weckzeiten[1].setAlarm(7,30,0,1);
+  //Einstellungen laden
+  loadConfig();
+  for(int i=0;i<7;i++){
+    weckzeiten[i].setInt(storage.weckZ[i]);
+  }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  weckentest();
+  anzeige();  //Menus anzeigen und Funktionen ausführen
+  klingeln(); //Klingelhandler
+}
 
-  if (second() <= 2) {
-    for (int i = 0; i < anzWeck; i++) {
-      if (weckzeiten[i].getAlarm(hour(),minute(),weekday())) {
-        wecken = 1;
-      }
+void klingeln() {
+  if (softDelay(0, 500)) {
+    if (wecken && blinken) {
+      tone(klingel, 666, 500);
+    } else {
+      if (wecken) blinken = !blinken;
+      digitalWrite(klingel, LOW);
     }
-  }
-
-  if (digitalRead(kick) == HIGH) {
-    wecken = 1;
-  }
-  if (digitalRead(aus) == HIGH) {
-    wecken = 0;
-  }
-
-
-  if (second()==0||second()==15||second()==30||second()==45){
-    lcd.setCursor(0,0);
-    sprintf(wetter,"%3d %%; %2d%cC",int(dht.readHumidity()),int(dht.readTemperature()),char(223)); //char(223) grad zeichen direkt versteht er nicht
-    lcd.print(wetter);
-  }
-  lcd.setCursor(0,1);
-  sprintf(uhrzeit,"    %02d:%02d:%02d    ",hour(),minute(),second());
-  lcd.print(uhrzeit);
-  display.setBrightness(0x0f);//helligkeit auf maximum
-  display.showNumberDec(hour()*100+minute(), true);
-
-  if (wecken) {
-    if (blinken) {
-      tone(klingel,666,500);
-    } 
-    else {
-        digitalWrite(klingel, LOW);
-      delay(500);
-    }
-    blinken = !blinken;
-  } 
-  else {
-    digitalWrite(klingel, LOW);
-    delay(5);
   }
 }
+
+
+
+
+
 
