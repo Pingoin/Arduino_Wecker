@@ -1,9 +1,9 @@
-//Bibliotheken:
-#include <Wire.h> //Fï¿½r viele I2C: LCD;RTC;
-#include <LiquidCrystal_I2C.h> //Fï¿½rs LCD
+l//Bibliotheken:
+#include <Wire.h> //Für viele I2C: LCD;RTC;
+#include <LiquidCrystal_I2C.h> //Fürs LCD
 #include <Time.h> //Zeitverwaltung
 #include <DS3232RTC.h> //RTC
-#include <stdio.h> //fï¿½r formatierte charArrays
+#include <stdio.h> //für formatierte charArrays
 #include <DHT.h> //Feuchte und temperatursensor
 #include <Pingoin.h> //Eigene Objektsammlung
 #include <EEPROM.h> //speichern im konsistenten speicher
@@ -53,7 +53,7 @@ byte secondOffset = 0;
 byte secondNew = 0;
 tmElements_t tm;
 time_t t;
-char lcdChar [lcdSpalten]; //String zum Anzeigen, wird fï¿½r formatierte Ausgaben benï¿½tigt
+char lcdChar [lcdSpalten]; //String zum Anzeigen, wird für formatierte Ausgaben benötigt
 bool wecken = 0;
 bool blinken = 0;
 AlarmTime weckzeiten[anzWeck];
@@ -63,26 +63,26 @@ byte weckMinute = 0;
 byte weckTag = 0;
 byte weckID = 0;
 char weckMen[3] = "hh";
-unsigned long lastMillis[] = {0}; //Laufzeiten fï¿½r soft delay
+unsigned long lastMillis[] = {0}; //Laufzeiten für soft delay
 //Blinken,
 
 
-//Gerï¿½te:
+//Geräte:
 LiquidCrystal_I2C lcd(0x27, lcdSpalten, lcdZeilen);//Definition des LCD displays
 DHT dht(DHTPIN, DHTTYPE); //Feuchte und Temperatur
 TM1637Display display(CLK, DIO);
 
 void setup() {
-  //gerï¿½te:
+  //geräte:
   Serial.begin(9600); //Serieller Monitor
   lcd.begin(); //Initialisierung des LCDs
   lcd.clear(); //auf jeden fall mit leerer LCD starten
-  setSyncProvider(RTC.get);//Zeit wird regelmï¿½ï¿½ig mit RTC synchronisiert
+  setSyncProvider(RTC.get);//Zeit wird regelmäßig mit RTC synchronisiert
 
   //Pins:
   pinMode(lcdStrom, OUTPUT);
   digitalWrite(13, LOW);
-  //ï¿½berprï¿½fungen:
+  //Überprüfungen:
   if (timeStatus() != timeSet)
     Serial.println("Konnte nicht mit der RTC verbinden");
   else
@@ -98,7 +98,7 @@ void setup() {
 void loop() {
   sommerZeit();
   weckentest();
-  anzeige();  //Menus anzeigen und Funktionen ausfï¿½hren
+  anzeige();  //Menus anzeigen und Funktionen ausführen
   klingeln(); //Klingelhandler
 }
 
