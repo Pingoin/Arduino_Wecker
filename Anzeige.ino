@@ -1,8 +1,22 @@
 void anzeige() {
 
+
+
+  if (analogRead(photo) > storage.hell) {
+    display.setBrightness(0x00);//helligkeit auf maximum
+    digitalWrite(lcdStrom, HIGH);
+  } else {
+    display.setBrightness(0x0f);//helligkeit auf maximum
+    digitalWrite(lcdStrom, LOW);
+  }
+
+
+
+
+  display.showNumberDec(hour() * 100 + minute(), true);
   lcd.setCursor(0, 0);
   sprintf(lcdChar, "%2s;%2s;%2s;%2s;%2s;%2s;%2s", weckzeiten[0].getString(), weckzeiten[1].getString(), weckzeiten[2].getString(), weckzeiten[3].getString(), weckzeiten[4].getString(), weckzeiten[5].getString(), weckzeiten[6].getString());
-  lcd.print(lcdChar);
+  lcd.print(lcdChar);/**/
   switch (menuID) {
     case 0:
       if (rechts.checkPressed()) {
@@ -19,11 +33,12 @@ void anzeige() {
         subMenuID = 0;
         lcd.clear();
       }
-      lcd.setCursor(0, 1);
+      lcd.setCursor(0, 1);/**/
+      /*lcd.setCursor(0, 0); /**/
       printTime();
-
-      lcd.setCursor(0, 2);
-      subMenuMax(2);
+      lcd.setCursor(0, 2);/**/
+      /*lcd.setCursor(0, 1); /**/
+      subMenuMax(3);
       switch (subMenuID) {
         case 0:
           sprintf(lcdChar, "%3d %%; %2d%cC         ", int(dht.readHumidity()), int(dht.readTemperature()), char(223));
@@ -52,6 +67,23 @@ void anzeige() {
             lcd.clear();
           }
           break;
+        case 3:
+          lcd.print("Einstellungen       ");
+          if (okay.checkPressed()) {
+            menuID = 5;
+            weckID = 0;
+            lastPot = analogRead(poti);
+            lcd.clear();
+            lastPot = storage.hell;
+          }
+          break;
+          /*16:2lcd
+            case 4:
+            sprintf(lcdChar, "%2s;%2s;%2s;%2s;%2s;%2s;%2s", weckzeiten[0].getString(), weckzeiten[1].getString(), weckzeiten[2].getString(), weckzeiten[3].getString(), weckzeiten[4].getString(), weckzeiten[5].getString(), weckzeiten[6].getString());
+            lcd.print(lcdChar);
+            break;
+          */
+
       }
       break;
     case 1:
@@ -70,7 +102,7 @@ void anzeige() {
         lcd.clear();
       }
       lcd.setCursor(0, 1);
-      printTime();
+      printTime();/**/
       subMenuMax(5);
       lcd.setCursor(0, 2);
       if (second() - secondOffset < 0) {
@@ -149,12 +181,19 @@ void anzeige() {
         } else {
           weckTag = 10;
         }
+        saveConfig();
       }
       subMenuMax(6);
+
+      /*
+        lcd.setCursor(0, 0);
+        sprintf(lcdChar, "%2s;%2s;%2s;%2s;%2s;%2s;%2s", weckzeiten[0].getString(), weckzeiten[1].getString(), weckzeiten[2].getString(), weckzeiten[3].getString(), weckzeiten[4].getString(), weckzeiten[5].getString(), weckzeiten[6].getString());
+        lcd.print(lcdChar);
+      */
       lcd.setCursor(subMenuID * 3, 1);
       lcd.print("++");
       lcd.setCursor(0, 2);
-      printTime();
+      printTime();/**/
 
       break;
     case 4:
@@ -176,7 +215,7 @@ void anzeige() {
       lcd.setCursor(weckID * 3, 1);
       lcd.print("++");
       lcd.setCursor(0, 2);
-      printTime();
+      printTime();/**/
       switch (subMenuID) {
         case 0:
           if (lastPot > analogRead(poti) + 5 || lastPot < analogRead(poti) - 5) {
@@ -194,23 +233,41 @@ void anzeige() {
           break;
         case 2:
           if (lastPot > analogRead(poti) + 5 || lastPot < analogRead(poti) - 5) {
-            weckTag = map(analogRead(poti), 0, 1024, 0, 11);
+            weckTag = map(analogRead(poti), 0, 1024, 0, weckzeiten[weckID].getDays());
           }
           weckMen[0] = 'D';
           weckMen[1] = 'A';
           break;
       }
       lcd.setCursor(0, 3);
-      sprintf(lcdChar, "%02d:%02d %03s %02s", weckStunde, weckMinute, wochentag(weckTag), weckMen);
+      sprintf(lcdChar, "%02d:%02d %03s %02s", weckStunde, weckMinute, weckzeiten[weckID].createStr(weckTag), weckMen);
       lcd.print(lcdChar);
       if (okay.checkPressed()) {
         menuID = 3;
-        lcd.clear();        
-          weckzeiten[weckID].setAlarm(weckStunde, weckMinute, weckTag);
-          storage.weckZ[weckID]=weckzeiten[weckID].getInt();
-          saveConfig();
-          
+        lcd.clear();
+        weckzeiten[weckID].setAlarm(weckStunde, weckMinute, weckTag);
+        storage.weckZ[weckID] = weckzeiten[weckID].getInt();
+        saveConfig();
       }
+      break;
+    case 5:
+      lcd.setCursor(0, 1);
+      printTime();
+      lcd.setCursor(0, 2);
+      sprintf(lcdChar, "%04d--%04d/%04d", lastPot, storage.hell, analogRead(photo));
+      lcd.print(lcdChar);
+      if (menu.checkPressed()) {
+        menuID = 0;
+        storage.hell = lastPot;
+        lcd.clear();
+      }
+      storage.hell = analogRead(poti);
+      if (okay.checkPressed()) {
+        menuID = 0;
+        saveConfig();
+        lcd.clear();
+      }
+
       break;
 
   }
