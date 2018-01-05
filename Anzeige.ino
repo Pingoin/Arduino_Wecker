@@ -1,12 +1,21 @@
 void anzeige() {
-  if (analogRead(photo) > storage.hell) {
+  bool sSegTest = false;
+  if (menuID == 5 && subMenuID == 1) {
+    sSegTest = true;
+  } else {
+    sSegTest = false;
+  }
+  if (analogRead(photo) > storage.hell && !sSegTest) {
     display.setBrightness(0x00);//helligkeit auf maximum
     digitalWrite(lcdStrom, HIGH);
-  } else {
-    display.setBrightness(0x0f);//helligkeit auf maximum
+  } else if (!sSegTest) {
+    display.setBrightness(storage.sSegH);//helligkeit auf maximum
     digitalWrite(lcdStrom, LOW);
+  } else {
+    display.setBrightness(storage.sSegH);//helligkeit auf maximum
+    digitalWrite(lcdStrom, HIGH);
   }
-  
+
   lcd.setCursor(0, 0);
   sprintf(lcdChar, "%2s;%2s;%2s;%2s;%2s;%2s;%2s", weckzeiten[0].getString(), weckzeiten[1].getString(), weckzeiten[2].getString(), weckzeiten[3].getString(), weckzeiten[4].getString(), weckzeiten[5].getString(), weckzeiten[6].getString());
   lcd.print(lcdChar);/**/
@@ -34,7 +43,7 @@ void anzeige() {
       subMenuMax(3);
       switch (subMenuID) {
         case 0:
-          sprintf(lcdChar, "%3d %%; %2d%cC         ", int(dht.readHumidity()), int(dht.readTemperature()), char(223));
+          sprintf(lcdChar, "%3d %%;%2d%cC;%4d hPa         ", feuchte, tempA, char(223),druck);
           lcd.print(lcdChar);
           break;
         case 1:
@@ -42,7 +51,7 @@ void anzeige() {
           if (okay.checkPressed()) {
             menuID = 1;
             subMenuID = 0;
-            tm=getLocalTime();
+            tm = getLocalTime();
             lastPot = analogRead(poti);
             lcd.clear();
           }
@@ -63,7 +72,8 @@ void anzeige() {
             weckID = 0;
             lastPot = analogRead(poti);
             lcd.clear();
-            lastPot = storage.hell;
+            lastSwitch = storage.hell;
+            lastHell = storage.sSegH;
           }
           break;
           /*16:2lcd
@@ -239,23 +249,60 @@ void anzeige() {
         saveConfig();
       }
       break;
-    case 5:
+    case 5:  /*+++++++++++Einstellungen+++++++++*/
       lcd.setCursor(0, 1);
       printTime();
       lcd.setCursor(0, 2);
-      sprintf(lcdChar, "%04d--%04d/%04d", lastPot, storage.hell, analogRead(photo));
-      lcd.print(lcdChar);
-      if (menu.checkPressed()) {
-        menuID = 0;
-        storage.hell = lastPot;
+      if (rechts.checkPressed()) {
+        subMenuID++;
+        storage.sSegH = lastHell;
+        storage.hell = lastSwitch;
         lcd.clear();
       }
-      storage.hell = analogRead(poti);
-      if (okay.checkPressed()) {
-        menuID = 0;
-        saveConfig();
+      if (links.checkPressed()) {
+        subMenuID--;
+        storage.sSegH = lastHell;
+        storage.hell = lastSwitch;
         lcd.clear();
       }
+      subMenuMax(1);
+      switch (subMenuID) {
+        case 0:
+          lcd.print("Schalthelligkeit");
+          lcd.setCursor(0, 3);
+          sprintf(lcdChar, "%04d--%04d/%04d", lastSwitch, storage.hell, analogRead(photo));
+          lcd.print(lcdChar);
+          if (menu.checkPressed()) {
+            menuID = 0;
+            storage.hell = lastSwitch;
+            lcd.clear();
+          }
+          storage.hell = analogRead(poti);
+          if (okay.checkPressed()) {
+            menuID = 0;
+            saveConfig();
+            lcd.clear();
+          }
+          break;
+        case 1:
+          lcd.print("Helligkeit");
+          lcd.setCursor(0, 3);
+          sprintf(lcdChar, "%04d--%04d", lastHell, storage.sSegH);
+          lcd.print(lcdChar);
+          if (menu.checkPressed()) {
+            menuID = 0;
+            storage.sSegH = lastHell;
+            lcd.clear();
+          }
+          storage.sSegH = map(analogRead(poti), 0, 1023, 0x00, 0x0F);
+          if (okay.checkPressed()) {
+            menuID = 0;
+            saveConfig();
+            lcd.clear();
+          }
+          break;
+      }
+
 
       break;
 

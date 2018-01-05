@@ -9,7 +9,7 @@ void subMenuMax(byte subMenuMax) {
 
 void weckentest() {
   if (second() <= 2) {
-    local=Zeitzone.toLocal(now());
+    local = Zeitzone.toLocal(now());
     for (int i = 0; i < anzWeck; i++) {
       if (weckzeiten[i].getAlarm(hour(local), minute(local), weekday(local))) {
         wecken = 1;
@@ -46,6 +46,9 @@ void loadConfig() {
 }
 
 void saveConfig() {
+  for (int i = 0; i < anzWeck; i++) {
+    storage.weckZ[i]=weckzeiten[i].getInt();
+  }
   for (unsigned int t = 0; t < sizeof(storage); t++) {
     if (EEPROM.read(CONFIG_START + t) != *((char*)&storage + t)) {
       EEPROM.write(CONFIG_START + t, *((char*)&storage + t));

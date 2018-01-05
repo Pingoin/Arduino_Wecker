@@ -9,6 +9,7 @@
 #include <Pingoin.h> //Eigene Objektsammlung
 #include <EEPROM.h> //speichern im konsistenten speicher
 #include <TM1637Display.h> //7Segment display
+#include <Adafruit_BMP085.h>  // Bibliothek für Drucksensoren von Adafruit laden für unseren BMP 180
 
 
 //Pinnbelegung:
@@ -24,20 +25,21 @@
 #define lcdStrom 7
 #define CLK 10
 #define DIO 9
-#define CONFIG_VERSION "003"
+#define CONFIG_VERSION "005"
 #define CONFIG_START 64
 
 struct StoreStruct {
   // This is for mere detection if they aö re your settings
   char version[4];
   int weckZ[7];
-  int hell;
-  bool sommer;
+  short int hell;
+  byte sSegH;
+
 } storage = {
   CONFIG_VERSION,
   {0, 0, 0, 0, 0, 0, 0},
   100,
-  false
+  0x0F
 };
 
 
@@ -59,28 +61,36 @@ bool wecken = 0;
 bool blinken = 0;
 AlarmTime weckzeiten[anzWeck];
 short int lastPot = 0;
+byte lastHell = 0;
+short int lastSwitch = 0;
 byte weckStunde = 0;
 byte weckMinute = 0;
 byte weckTag = 0;
 byte weckID = 0;
+byte feuchte=0;
+byte tempA=0;
+int druck=0;
+byte tempI=0;
 char weckMen[3] = "hh";
 TimeChangeRule myDST = {"MESZ", Last, Sun, Mar, 2, 120};    //Regel für Sommerzeit begin UTC +2
 TimeChangeRule mySTD = {"MEZ", Last, Sun, Oct, 3, 60};     //Regel für Standardzeit begin UTC +1
 Timezone Zeitzone(myDST, mySTD);//Zeitzone aus Regeln susammenbauen
 
 
-unsigned long lastMillis[] = {0}; //Laufzeiten für soft delay
-//Blinken,
+unsigned long lastMillis[] = {0,0}; //Laufzeiten für soft delay
+//Blinken,Sensoren
 
 
 //Geräte:
 LiquidCrystal_I2C lcd(0x27, lcdSpalten, lcdZeilen);//Definition des LCD displays
 DHT dht(DHTPIN, DHTTYPE); //Feuchte und Temperatur
 TM1637Display display(CLK, DIO);
+Adafruit_BMP085 druckSensor;  // Sensorobjekt mit Namen "druckSensor" erstellen
 
 void setup() {
   //geräte:
   Serial.begin(9600); //Serieller Monitor
+  druckSensor.begin();   //zuvor defenierten Sensor "druckSensor" starten
   lcd.begin(); //Initialisierung des LCDs
   lcd.clear(); //auf jeden fall mit leerer LCD starten
   setSyncProvider(RTC.get);//Zeit wird regelmäßig mit RTC synchronisiert
@@ -96,7 +106,7 @@ void setup() {
 
   //Einstellungen laden
   loadConfig();
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < anzWeck; i++) {
     weckzeiten[i].setInt(storage.weckZ[i]);
   }
   display.setColon(true);// Doppelpunkt vom siebensegmenter
@@ -104,6 +114,7 @@ void setup() {
 
 void loop() {
   weckentest();
+  sensoren();
   anzeige();  //Menus anzeigen und Funktionen ausführen
   klingeln(); //Klingelhandler
 }
@@ -119,7 +130,18 @@ void klingeln() {
   }
 }
 
-
+void sensoren(){
+  if(millis()>=lastMillis[1]+1000){
+feuchte=int(dht.readHumidity());
+tempA=int(dht.readTemperature());
+druck=int(druckSensor.readPressure()/100);
+/*tempI;/**/
+Serial.println(feuchte);
+Serial.println(tempA);
+Serial.println(druck);
+lastMillis[1]=millis();
+  }
+}
 
 
 
